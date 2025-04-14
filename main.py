@@ -8,13 +8,13 @@ import os # Importing os for operating system dependent functionality
 
 class OpenAIGUI(QMainWindow):
     def __init__(self):
-        super().__init__()
+        super().__init__() # Initializing the parent class
         
     def setup_openai(self):
-        load_dotenv()
+        load_dotenv() # Loading environment variables from .env file
+        api_key = os.getenv("OPENAI_API_KEY") # Loading the OpenAI API key from environment variables
+        self.client = OpenAI(api_key=api_key) # Initializing OpenAI client with the API key
 
-        api_key = os.getenv("OPENAI_API_KEY")
-        self.client = OpenAI(api_key=api_key)
 
 completion = client.chat.completions.create(
     model="gpt-4o",
