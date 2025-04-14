@@ -39,6 +39,15 @@ class OpenAIGUI(QMainWindow):
         self.prompt_text.setMinimumHeight(100)
         main_layout.addWidget(self.prompt_text)
 
+        # Add button
+        button_layout = QHBoxLayout()
+        self.submit_button = QPushButton('Submit')
+        self.submit_button.clicked.connect(self.get_response)
+        button_layout.addStretch()
+        button_layout.addWidget(self.submit_button)
+        button_layout.addStretch()
+        main_layout.addLayout(button_layout)
+
         # Set central widget
         self.setCentralWidget(central_widget)
 
