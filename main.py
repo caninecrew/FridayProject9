@@ -19,7 +19,8 @@ class OpenAIGUI(QMainWindow):
         # Set window properties
         self.setWindowTitle('OpenAI Interface')
         self.setGeometry(300, 300, 600, 400)
-        
+
+'''    
 completion = client.chat.completions.create(
     model="gpt-4o",
     messages=[
@@ -31,3 +32,4 @@ completion = client.chat.completions.create(
 )
 
 print(completion.choices[0].message.content)
+'''
