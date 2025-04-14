@@ -77,7 +77,7 @@ python main.py
 
 ## License
 
-This project is part of the DS-3850-001 course assignment.
+This project is part of the Spring 2025 DS-3850-001 course assignment at Tennessee Technological University..
 
 ## Acknowledgments
 
