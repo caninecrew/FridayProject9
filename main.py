@@ -15,7 +15,7 @@ class OpenAIGUI(QMainWindow):
         api_key = os.getenv("OPENAI_API_KEY") # Loading the OpenAI API key from environment variables
         self.client = OpenAI(api_key=api_key) # Initializing OpenAI client with the API key
 
-    def ininUI(self):
+    def ininUI(self): # Initializing the UI components
         # Set window properties
         self.setWindowTitle('OpenAI Interface')
         self.setGeometry(300, 300, 600, 400)
@@ -29,6 +29,9 @@ class OpenAIGUI(QMainWindow):
         title_label.setAlignment(Qt.AlignCenter)
         title_label.setStyleSheet('font-size: 18px; font-weight: bold;')
         main_layout.addWidget(title_label)
+
+        # Set central widget
+        self.setCentralWidget(central_widget)
 
 
 '''    
