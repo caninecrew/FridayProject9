@@ -48,6 +48,15 @@ class OpenAIGUI(QMainWindow):
         button_layout.addStretch()
         main_layout.addLayout(button_layout)
 
+        # Add response area
+        response_label = QLabel('Response:')
+        main_layout.addWidget(response_label)
+        
+        self.response_text = QTextEdit()
+        self.response_text.setReadOnly(True)
+        self.response_text.setPlaceholderText('Response will appear here...')
+        main_layout.addWidget(self.response_text)
+
         # Set central widget
         self.setCentralWidget(central_widget)
 
