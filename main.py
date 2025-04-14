@@ -61,18 +61,29 @@ class OpenAIGUI(QMainWindow):
         self.setCentralWidget(central_widget)
 
     def get_response(self):
-        completion = self.client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {
-                    "role": "user",
-                    "content": "Write a one-sentence bedtime story about a unicorn."
-                }
-            ]
-        )
-
-        print(completion.choices[0].message.content)        # Create a button to get response from OpenAI API
-
+        prompt = self.prompt_text.toPlainText()
+        if not prompt:
+            self.response_text.setText("Please enter a prompt.")
+            return
+            
+        try:
+            completion = self.client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ]
+            )
+            
+            response = completion.choices[0].message.content
+            self.response_text.setText(response)
+            print(response)  # Also print to console for debugging
+        except Exception as e:
+            error_message = f"Error: {str(e)}"
+            self.response_text.setText(error_message)
+            print(error_message)
 def main():
     app = QApplication(sys.argv) # Creating a QApplication instance
     gui = OpenAIGUI() # Creating an instance of OpenAIGUI
