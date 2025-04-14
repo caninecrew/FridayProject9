@@ -52,11 +52,21 @@ class OpenAIGUI(QMainWindow):
         self.counter_label = QLabel('Characters: 0 | Tokens: 0')
         main_layout.addWidget(self.counter_label)
 
-        # Add button
+        # Add buttons
         button_layout = QHBoxLayout()
+        
+        # Submit button
         self.submit_button = QPushButton('Submit')
         self.submit_button.clicked.connect(self.get_response)
+        self.submit_button.setStyleSheet('background-color: #2ecc71; color: white; font-weight: bold;')
+        
+        # Clear button
+        self.clear_button = QPushButton('Clear')
+        self.clear_button.clicked.connect(self.clear_fields)
+        self.clear_button.setStyleSheet('background-color: #e74c3c; color: white;')
+        
         button_layout.addStretch()
+        button_layout.addWidget(self.clear_button)
         button_layout.addWidget(self.submit_button)
         button_layout.addStretch()
         main_layout.addLayout(button_layout)
@@ -181,6 +191,21 @@ class OpenAIGUI(QMainWindow):
         finally:
             # Hide the loading indicator when done
             self.show_loading(False)
+
+    def clear_fields(self):
+        """Clear both input and output fields"""
+        # Reset the prompt text field
+        self.prompt_text.clear()
+        
+        # Reset the response text field
+        self.response_text.clear()
+        self.response_text.setPlaceholderText('Response will appear here...')
+        
+        # Reset the counter
+        self.counter_label.setText('Characters: 0 | Tokens: 0')
+        
+        # Set focus back to the input field for convenience
+        self.prompt_text.setFocus()
 
 def main():
     app = QApplication(sys.argv) # Creating a QApplication instance
