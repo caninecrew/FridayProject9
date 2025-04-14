@@ -33,17 +33,16 @@ class OpenAIGUI(QMainWindow):
         # Set central widget
         self.setCentralWidget(central_widget)
 
+    def get_response(self):
+        completion = self.client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {
+                    "role": "user",
+                    "content": "Write a one-sentence bedtime story about a unicorn."
+                }
+            ]
+        )
 
-'''    
-completion = client.chat.completions.create(
-    model="gpt-4o",
-    messages=[
-        {
-            "role": "user",
-            "content": "Write a one-sentence bedtime story about a unicorn."
-        }
-    ]
-)
+        print(completion.choices[0].message.content)        # Create a button to get response from OpenAI API
 
-print(completion.choices[0].message.content)
-'''
