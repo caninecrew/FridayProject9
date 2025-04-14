@@ -5,19 +5,22 @@ from PyQt5.QtCore import Qt # Importing Qt for Qt-specific features
 from openai import OpenAI # Importing OpenAI for API interaction
 from dotenv import load_dotenv # Importing load_dotenv for loading environment variables
 import os # Importing os for operating system dependent functionality
+import tiktoken # Importing tiktoken for token counting
 
 class OpenAIGUI(QMainWindow):
     def __init__(self):
         super().__init__() # Initializing the parent class
         self.setup_openai() # Setting up OpenAI API
-        self.ininUI() # Initializing the UI components
+        self.initUI() # Initializing the UI components
         
     def setup_openai(self):
         load_dotenv() # Loading environment variables from .env file
         api_key = os.getenv("OPENAI_API_KEY") # Loading the OpenAI API key from environment variables
         self.client = OpenAI(api_key=api_key) # Initializing OpenAI client with the API key
+        # Initialize tokenizer for GPT-4
+        self.tokenizer = tiktoken.encoding_for_model("gpt-4")
 
-    def ininUI(self): # Initializing the UI components
+    def initUI(self): # Initializing the UI components
         # Set window properties
         self.setWindowTitle('OpenAI Interface')
         self.setGeometry(300, 300, 600, 400)
@@ -39,7 +42,12 @@ class OpenAIGUI(QMainWindow):
         self.prompt_text = QTextEdit()
         self.prompt_text.setPlaceholderText('Write your prompt here...')
         self.prompt_text.setMinimumHeight(100)
+        self.prompt_text.textChanged.connect(self.update_counter)
         main_layout.addWidget(self.prompt_text)
+        
+        # Add counter label
+        self.counter_label = QLabel('Characters: 0 | Tokens: 0')
+        main_layout.addWidget(self.counter_label)
 
         # Add button
         button_layout = QHBoxLayout()
@@ -61,6 +69,13 @@ class OpenAIGUI(QMainWindow):
 
         # Set central widget
         self.setCentralWidget(central_widget)
+        
+    def update_counter(self):
+        """Update character and token count when text changes"""
+        text = self.prompt_text.toPlainText()
+        char_count = len(text)
+        token_count = len(self.tokenizer.encode(text)) if text else 0
+        self.counter_label.setText(f'Characters: {char_count} | Tokens: {token_count}')
 
     def get_response(self):
         prompt = self.prompt_text.toPlainText()
@@ -81,7 +96,7 @@ class OpenAIGUI(QMainWindow):
             
             response = completion.choices[0].message.content
             self.response_text.setText(response)
-            #print(response)  # Also print to console for debugging
+            # print(response)  # Also print to console for debugging
         except Exception as e:
             error_message = f"Error: {str(e)}"
             self.response_text.setText(error_message)
