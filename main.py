@@ -9,6 +9,8 @@ import os # Importing os for operating system dependent functionality
 class OpenAIGUI(QMainWindow):
     def __init__(self):
         super().__init__() # Initializing the parent class
+        self.setup_openai() # Setting up OpenAI API
+        self.ininUI() # Initializing the UI components
         
     def setup_openai(self):
         load_dotenv() # Loading environment variables from .env file
@@ -84,6 +86,7 @@ class OpenAIGUI(QMainWindow):
             error_message = f"Error: {str(e)}"
             self.response_text.setText(error_message)
             print(error_message)
+
 def main():
     app = QApplication(sys.argv) # Creating a QApplication instance
     gui = OpenAIGUI() # Creating an instance of OpenAIGUI
