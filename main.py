@@ -46,3 +46,11 @@ class OpenAIGUI(QMainWindow):
 
         print(completion.choices[0].message.content)        # Create a button to get response from OpenAI API
 
+def main():
+    app = QApplication(sys.argv) # Creating a QApplication instance
+    gui = OpenAIGUI() # Creating an instance of OpenAIGUI
+    gui.show() # Showing the GUI window
+    sys.exit(app.exec_()) # Exiting the application when the window is closed
+
+if __name__ == '__main__':
+    main()
