@@ -3,7 +3,8 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                             QHBoxLayout, QLabel, QPushButton, QTextEdit,
                             QProgressBar, QComboBox, QColorDialog, QMenu,
                             QAction, QToolBar, QDialog, QListWidget, QListWidgetItem,
-                            QInputDialog, QMessageBox) # Importing necessary PyQt5 widgets
+                            QInputDialog, QMessageBox, QSlider, QSpinBox, QCheckBox,
+                            QGroupBox) # Importing necessary PyQt5 widgets
 from PyQt5.QtCore import Qt, QTimer, QSettings, QSize # Importing Qt for Qt-specific features
 from PyQt5.QtGui import QIcon, QFont, QColor # Importing Qt GUI components
 from openai import OpenAI # Importing OpenAI for API interaction
@@ -13,6 +14,7 @@ import os # Importing os for operating system dependent functionality
 import tiktoken # Importing tiktoken for token counting
 import requests.exceptions # Import requests exceptions for network error handling
 import json # Importing json for storing and loading settings
+import datetime # For tracking usage and timestamps
 
 class ThemeManager:
     """Manages theme settings and provides theme presets"""
@@ -278,6 +280,292 @@ class SavedPromptsDialog(QDialog):
             self.update_prompt_list()
 
 
+class CreditManager:
+    """Manages API usage and helps prevent excessive credit consumption"""
+    
+    def __init__(self):
+        self.usage_history = []
+        self.daily_limit = 0  # 0 means no limit
+        self.request_count_today = 0
+        self.token_count_today = 0
+        self.last_reset_date = datetime.datetime.now().date()
+    
+    def track_usage(self, prompt_tokens, completion_tokens=0, cost=0):
+        """Track API usage"""
+        today = datetime.datetime.now().date()
+        
+        # Reset counters if it's a new day
+        if today != self.last_reset_date:
+            self.request_count_today = 0
+            self.token_count_today = 0
+            self.last_reset_date = today
+        
+        # Add usage record
+        usage = {
+            "timestamp": datetime.datetime.now().isoformat(),
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "total_tokens": prompt_tokens + completion_tokens,
+            "estimated_cost": cost
+        }
+        
+        self.usage_history.append(usage)
+        self.request_count_today += 1
+        self.token_count_today += prompt_tokens + completion_tokens
+    
+    def can_make_request(self):
+        """Check if request can be made without exceeding daily limit"""
+        if self.daily_limit <= 0:  # No limit set
+            return True
+        
+        return self.request_count_today < self.daily_limit
+    
+    def get_usage_stats(self):
+        """Get current usage statistics"""
+        return {
+            "requests_today": self.request_count_today,
+            "tokens_today": self.token_count_today,
+            "daily_limit": self.daily_limit
+        }
+    
+    def set_daily_limit(self, limit):
+        """Set daily request limit"""
+        self.daily_limit = limit
+    
+    def get_usage_history(self):
+        """Get full usage history"""
+        return self.usage_history
+
+
+class CreditLimitDialog(QDialog):
+    """Dialog for setting daily usage limits"""
+    
+    def __init__(self, parent=None, current_limit=0):
+        super().__init__(parent)
+        self.current_limit = current_limit
+        self.init_ui()
+    
+    def init_ui(self):
+        self.setWindowTitle("Set API Usage Limits")
+        self.setMinimumWidth(350)
+        
+        layout = QVBoxLayout(self)
+        
+        # Enable limits checkbox
+        self.enable_limits = QCheckBox("Enable daily request limits")
+        self.enable_limits.setChecked(self.current_limit > 0)
+        self.enable_limits.toggled.connect(self.toggle_limit_controls)
+        layout.addWidget(self.enable_limits)
+        
+        # Limit settings group
+        self.limit_group = QGroupBox("Daily Limits")
+        limit_layout = QVBoxLayout()
+        
+        # Request limit spinbox
+        request_layout = QHBoxLayout()
+        request_layout.addWidget(QLabel("Max API requests per day:"))
+        self.request_limit = QSpinBox()
+        self.request_limit.setRange(1, 1000)
+        self.request_limit.setValue(max(1, self.current_limit))
+        request_layout.addWidget(self.request_limit)
+        limit_layout.addLayout(request_layout)
+        
+        # Add warning about limits
+        limit_layout.addWidget(QLabel("Note: Setting limits helps prevent accidental overuse of your API credits."))
+        
+        self.limit_group.setLayout(limit_layout)
+        layout.addWidget(self.limit_group)
+        
+        # Add buttons
+        button_layout = QHBoxLayout()
+        
+        save_button = QPushButton("Save")
+        save_button.clicked.connect(self.accept)
+        
+        cancel_button = QPushButton("Cancel")
+        cancel_button.clicked.connect(self.reject)
+        
+        button_layout.addWidget(save_button)
+        button_layout.addWidget(cancel_button)
+        
+        layout.addLayout(button_layout)
+        
+        # Initialize state
+        self.toggle_limit_controls(self.enable_limits.isChecked())
+    
+    def toggle_limit_controls(self, enabled):
+        """Enable or disable limit controls"""
+        self.limit_group.setEnabled(enabled)
+    
+    def get_limit(self):
+        """Get the configured limit"""
+        if not self.enable_limits.isChecked():
+            return 0
+        return self.request_limit.value()
+
+
+class UsageStatsDialog(QDialog):
+    """Dialog for displaying API usage statistics"""
+    
+    def __init__(self, parent=None, credit_manager=None):
+        super().__init__(parent)
+        self.credit_manager = credit_manager
+        self.init_ui()
+    
+    def init_ui(self):
+        self.setWindowTitle("API Usage Statistics")
+        self.setMinimumSize(400, 300)
+        
+        layout = QVBoxLayout(self)
+        
+        # Current stats
+        stats = self.credit_manager.get_usage_stats()
+        
+        stats_group = QGroupBox("Today's Usage")
+        stats_layout = QVBoxLayout()
+        
+        stats_layout.addWidget(QLabel(f"API Requests Today: {stats['requests_today']}"))
+        stats_layout.addWidget(QLabel(f"Total Tokens Today: {stats['tokens_today']}"))
+        
+        if stats['daily_limit'] > 0:
+            stats_layout.addWidget(QLabel(f"Daily Limit: {stats['daily_limit']} requests"))
+            stats_layout.addWidget(QLabel(f"Remaining Requests: {max(0, stats['daily_limit'] - stats['requests_today'])}"))
+        else:
+            stats_layout.addWidget(QLabel("Daily Limit: No limit set"))
+        
+        stats_group.setLayout(stats_layout)
+        layout.addWidget(stats_group)
+        
+        # Usage history list
+        history_group = QGroupBox("Recent API Calls")
+        history_layout = QVBoxLayout()
+        
+        history_list = QListWidget()
+        
+        # Add history items in reverse chronological order (newest first)
+        for usage in reversed(self.credit_manager.get_usage_history()[-20:]):  # Show last 20 entries
+            timestamp = datetime.datetime.fromisoformat(usage["timestamp"]).strftime("%Y-%m-%d %H:%M:%S")
+            item_text = f"{timestamp} - Tokens: {usage['total_tokens']}"
+            history_list.addItem(item_text)
+        
+        history_layout.addWidget(history_list)
+        history_group.setLayout(history_layout)
+        layout.addWidget(history_group)
+        
+        # Close button
+        close_button = QPushButton("Close")
+        close_button.clicked.connect(self.accept)
+        layout.addWidget(close_button)
+
+
+class ModelSelector(QDialog):
+    """Dialog for selecting and configuring the OpenAI model"""
+    
+    def __init__(self, parent=None, current_model="gpt-4o", current_temperature=1.0, current_max_tokens=None):
+        super().__init__(parent)
+        self.current_model = current_model
+        self.current_temperature = current_temperature
+        self.current_max_tokens = current_max_tokens
+        self.init_ui()
+    
+    def init_ui(self):
+        self.setWindowTitle("Model Settings")
+        self.setMinimumWidth(400)
+        
+        layout = QVBoxLayout(self)
+        
+        # Model selection
+        model_group = QGroupBox("Model Selection")
+        model_layout = QVBoxLayout()
+        
+        # Model dropdown
+        model_layout.addWidget(QLabel("Select Model:"))
+        self.model_selector = QComboBox()
+        
+        # Add available models - could be expanded based on your needs
+        available_models = [
+            "gpt-4o",
+            "gpt-4-turbo",
+            "gpt-3.5-turbo"
+        ]
+        
+        for model in available_models:
+            self.model_selector.addItem(model)
+            
+        # Set current model
+        index = self.model_selector.findText(self.current_model)
+        if index >= 0:
+            self.model_selector.setCurrentIndex(index)
+        
+        model_layout.addWidget(self.model_selector)
+        model_group.setLayout(model_layout)
+        layout.addWidget(model_group)
+        
+        # Parameters
+        params_group = QGroupBox("Model Parameters")
+        params_layout = QVBoxLayout()
+        
+        # Temperature
+        temp_layout = QHBoxLayout()
+        temp_layout.addWidget(QLabel("Temperature:"))
+        
+        self.temperature_slider = QSlider(Qt.Horizontal)
+        self.temperature_slider.setRange(0, 20)  # 0 to 2.0 (multiplied by 10)
+        self.temperature_slider.setValue(int(self.current_temperature * 10))
+        
+        self.temperature_label = QLabel(f"{self.current_temperature:.1f}")
+        self.temperature_slider.valueChanged.connect(self.update_temperature_label)
+        
+        temp_layout.addWidget(self.temperature_slider)
+        temp_layout.addWidget(self.temperature_label)
+        params_layout.addLayout(temp_layout)
+        
+        # Max tokens
+        tokens_layout = QHBoxLayout()
+        tokens_layout.addWidget(QLabel("Max Tokens (0 = no limit):"))
+        
+        self.max_tokens = QSpinBox()
+        self.max_tokens.setRange(0, 8192)
+        self.max_tokens.setValue(self.current_max_tokens if self.current_max_tokens is not None else 0)
+        
+        tokens_layout.addWidget(self.max_tokens)
+        params_layout.addLayout(tokens_layout)
+        
+        # Help text
+        params_layout.addWidget(QLabel("Note: Lower temperature values produce more predictable outputs."))
+        params_layout.addWidget(QLabel("Higher values make the output more creative but less predictable."))
+        
+        params_group.setLayout(params_layout)
+        layout.addWidget(params_group)
+        
+        # Buttons
+        button_layout = QHBoxLayout()
+        
+        save_button = QPushButton("Save")
+        save_button.clicked.connect(self.accept)
+        
+        cancel_button = QPushButton("Cancel")
+        cancel_button.clicked.connect(self.reject)
+        
+        button_layout.addWidget(save_button)
+        button_layout.addWidget(cancel_button)
+        
+        layout.addLayout(button_layout)
+    
+    def update_temperature_label(self, value):
+        """Update temperature label when slider is moved"""
+        temperature = value / 10.0
+        self.temperature_label.setText(f"{temperature:.1f}")
+    
+    def get_settings(self):
+        """Get the configured model settings"""
+        return {
+            "model": self.model_selector.currentText(),
+            "temperature": self.temperature_slider.value() / 10.0,
+            "max_tokens": self.max_tokens.value() if self.max_tokens.value() > 0 else None
+        }
+
+
 class OpenAIGUI(QMainWindow):
     def __init__(self):
         super().__init__() # Initializing the parent class
@@ -286,6 +574,12 @@ class OpenAIGUI(QMainWindow):
         self.theme_manager = ThemeManager()
         self.prompts_manager = PromptsManager()
         self.settings_manager = SettingsManager("FridayProject9", "OpenAIGUI")
+        self.credit_manager = CreditManager()
+        
+        # Default model settings
+        self.model = "gpt-4o"
+        self.temperature = 1.0
+        self.max_tokens = None
         
         # Load saved settings
         self.load_settings()
@@ -319,6 +613,40 @@ class OpenAIGUI(QMainWindow):
         saved_prompts = self.settings_manager.get_prompts()
         if saved_prompts:
             self.prompts_manager.saved_prompts = saved_prompts
+            
+        # Load model settings
+        self.model = self.settings_manager.settings.value("model", "gpt-4o")
+        self.temperature = float(self.settings_manager.settings.value("temperature", 1.0))
+        
+        max_tokens = self.settings_manager.settings.value("max_tokens", None)
+        if max_tokens is not None and max_tokens != "None":
+            self.max_tokens = int(max_tokens)
+        else:
+            self.max_tokens = None
+            
+        # Load credit limits
+        daily_limit = int(self.settings_manager.settings.value("daily_limit", 0))
+        self.credit_manager.set_daily_limit(daily_limit)
+        
+        # Load usage history
+        usage_history = self.settings_manager.settings.value("usage_history", None)
+        if usage_history:
+            try:
+                self.credit_manager.usage_history = json.loads(usage_history)
+            except json.JSONDecodeError:
+                self.credit_manager.usage_history = []
+                
+        # Load last reset date
+        last_reset = self.settings_manager.settings.value("last_reset_date", None)
+        if last_reset:
+            try:
+                self.credit_manager.last_reset_date = datetime.datetime.fromisoformat(last_reset).date()
+            except (ValueError, TypeError):
+                self.credit_manager.last_reset_date = datetime.datetime.now().date()
+        
+        # Load request count
+        self.credit_manager.request_count_today = int(self.settings_manager.settings.value("request_count_today", 0))
+        self.credit_manager.token_count_today = int(self.settings_manager.settings.value("token_count_today", 0))
     
     def save_settings(self):
         """Save user settings"""
@@ -332,6 +660,18 @@ class OpenAIGUI(QMainWindow):
         
         # Save prompts
         self.settings_manager.save_prompts(self.prompts_manager.get_prompts())
+        
+        # Save model settings
+        self.settings_manager.settings.setValue("model", self.model)
+        self.settings_manager.settings.setValue("temperature", self.temperature)
+        self.settings_manager.settings.setValue("max_tokens", str(self.max_tokens))
+        
+        # Save credit limits and usage
+        self.settings_manager.settings.setValue("daily_limit", self.credit_manager.daily_limit)
+        self.settings_manager.settings.setValue("usage_history", json.dumps(self.credit_manager.usage_history))
+        self.settings_manager.settings.setValue("last_reset_date", self.credit_manager.last_reset_date.isoformat())
+        self.settings_manager.settings.setValue("request_count_today", self.credit_manager.request_count_today)
+        self.settings_manager.settings.setValue("token_count_today", self.credit_manager.token_count_today)
 
     def initUI(self): # Initializing the UI components
         # Set window properties
@@ -449,6 +789,22 @@ class OpenAIGUI(QMainWindow):
         customize_action = QAction("Customize Theme", self)
         customize_action.triggered.connect(self.customize_theme)
         self.toolbar.addAction(customize_action)
+        self.toolbar.addSeparator()
+        
+        # Model settings
+        model_action = QAction("Model Settings", self)
+        model_action.triggered.connect(self.open_model_settings)
+        self.toolbar.addAction(model_action)
+        
+        # Credit limit settings
+        credits_action = QAction("Credit Limits", self)
+        credits_action.triggered.connect(self.open_credit_settings)
+        self.toolbar.addAction(credits_action)
+        
+        # Usage statistics
+        usage_action = QAction("Usage Stats", self)
+        usage_action.triggered.connect(self.show_usage_stats)
+        self.toolbar.addAction(usage_action)
     
     def change_theme(self, theme_name):
         """Change the current theme"""
@@ -581,30 +937,85 @@ class OpenAIGUI(QMainWindow):
             self.response_text.setPlaceholderText("Response will appear here...")
         QApplication.processEvents()  # Force UI update
 
+    def open_model_settings(self):
+        """Open dialog to configure model settings"""
+        dialog = ModelSelector(self, self.model, self.temperature, self.max_tokens)
+        
+        if dialog.exec_():
+            settings = dialog.get_settings()
+            self.model = settings["model"]
+            self.temperature = settings["temperature"]
+            self.max_tokens = settings["max_tokens"]
+            
+            # Update model info display if exists
+            if hasattr(self, 'model_info'):
+                self.model_info.setText(f"Model: {self.model} | Temp: {self.temperature}")
+    
+    def open_credit_settings(self):
+        """Open dialog to set credit limits"""
+        dialog = CreditLimitDialog(self, self.credit_manager.daily_limit)
+        
+        if dialog.exec_():
+            limit = dialog.get_limit()
+            self.credit_manager.set_daily_limit(limit)
+            
+            message = "Daily limit disabled. No usage restrictions applied." if limit == 0 else f"Daily limit set to {limit} requests."
+            QMessageBox.information(self, "Credit Limit Updated", message)
+    
+    def show_usage_stats(self):
+        """Show dialog with API usage statistics"""
+        dialog = UsageStatsDialog(self, self.credit_manager)
+        dialog.exec_()
+
     def get_response(self):
         prompt = self.prompt_text.toPlainText()
         if not prompt:
             self.response_text.setText("Please enter a prompt.")
             return
         
+        # Check if we can make the request within limits
+        if not self.credit_manager.can_make_request():
+            self.response_text.setText(
+                "Daily API request limit reached. To prevent accidental overuse of your OpenAI credits, "
+                "the application has stopped making new requests.\n\n"
+                "You can adjust or disable this limit in the 'Credit Limits' settings."
+            )
+            return
+        
         # Show the loading indicator
         self.show_loading(True)
             
         try:
-            completion = self.client.chat.completions.create(
-                model="gpt-4o",
-                messages=[
+            # Calculate tokens before making request
+            prompt_tokens = len(self.tokenizer.encode(prompt))
+            
+            # Prepare model parameters
+            model_params = {
+                "model": self.model,
+                "messages": [
                     {
                         "role": "user",
                         "content": prompt
                     }
                 ],
-                timeout=30  # Set a reasonable timeout (30 seconds)
-            )
+                "temperature": self.temperature,
+                "timeout": 30  # Set a reasonable timeout (30 seconds)
+            }
             
+            # Add max_tokens if specified
+            if self.max_tokens:
+                model_params["max_tokens"] = self.max_tokens
+            
+            # Make the API call
+            completion = self.client.chat.completions.create(**model_params)
+            
+            # Track usage
+            completion_tokens = completion.usage.completion_tokens
+            self.credit_manager.track_usage(prompt_tokens, completion_tokens)
+            
+            # Get and display response
             response = completion.choices[0].message.content
             self.response_text.setText(response)
-            # print(response)  # Also print to console for debugging
             
         # Network-specific error handling
         except APIConnectionError as e:
