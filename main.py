@@ -20,6 +20,17 @@ class OpenAIGUI(QMainWindow):
         self.setWindowTitle('OpenAI Interface')
         self.setGeometry(300, 300, 600, 400)
 
+        # Create central widget and layout
+        central_widget = QWidget()
+        main_layout = QVBoxLayout(central_widget)
+
+        # Add title label
+        title_label = QLabel('OpenAI Interface')
+        title_label.setAlignment(Qt.AlignCenter)
+        title_label.setStyleSheet('font-size: 18px; font-weight: bold;')
+        main_layout.addWidget(title_label)
+
+
 '''    
 completion = client.chat.completions.create(
     model="gpt-4o",
