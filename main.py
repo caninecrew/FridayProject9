@@ -1,6 +1,16 @@
-from openai import OpenAI
-from dotenv import load_dotenv
-import os
+import sys # Importing sys for system-specific parameters and functions
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
+                            QHBoxLayout, QLabel, QPushButton, QTextEdit) # Importing necessary PyQt5 widgets
+from PyQt5.QtCore import Qt # Importing Qt for Qt-specific features
+from openai import OpenAI # Importing OpenAI for API interaction
+from dotenv import load_dotenv # Importing load_dotenv for loading environment variables
+import os # Importing os for operating system dependent functionality
+
+class OpenAIGUI(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        
+
 
 load_dotenv()
 
