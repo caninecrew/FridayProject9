@@ -461,10 +461,9 @@ class UsageStatsDialog(QDialog):
 class ModelSelector(QDialog):
     """Dialog for selecting and configuring the OpenAI model"""
     
-    def __init__(self, parent=None, current_model="gpt-4o", current_temperature=1.0, current_max_tokens=None):
+    def __init__(self, parent=None, current_model="gpt-4o", current_max_tokens=None):
         super().__init__(parent)
         self.current_model = current_model
-        self.current_temperature = current_temperature
         self.current_max_tokens = current_max_tokens
         self.init_ui()
     
@@ -505,21 +504,6 @@ class ModelSelector(QDialog):
         params_group = QGroupBox("Model Parameters")
         params_layout = QVBoxLayout()
         
-        # Temperature
-        temp_layout = QHBoxLayout()
-        temp_layout.addWidget(QLabel("Temperature:"))
-        
-        self.temperature_slider = QSlider(Qt.Horizontal)
-        self.temperature_slider.setRange(0, 20)  # 0 to 2.0 (multiplied by 10)
-        self.temperature_slider.setValue(int(self.current_temperature * 10))
-        
-        self.temperature_label = QLabel(f"{self.current_temperature:.1f}")
-        self.temperature_slider.valueChanged.connect(self.update_temperature_label)
-        
-        temp_layout.addWidget(self.temperature_slider)
-        temp_layout.addWidget(self.temperature_label)
-        params_layout.addLayout(temp_layout)
-        
         # Max tokens
         tokens_layout = QHBoxLayout()
         tokens_layout.addWidget(QLabel("Max Tokens (0 = no limit):"))
@@ -530,10 +514,6 @@ class ModelSelector(QDialog):
         
         tokens_layout.addWidget(self.max_tokens)
         params_layout.addLayout(tokens_layout)
-        
-        # Help text
-        params_layout.addWidget(QLabel("Note: Lower temperature values produce more predictable outputs."))
-        params_layout.addWidget(QLabel("Higher values make the output more creative but less predictable."))
         
         params_group.setLayout(params_layout)
         layout.addWidget(params_group)
@@ -552,16 +532,10 @@ class ModelSelector(QDialog):
         
         layout.addLayout(button_layout)
     
-    def update_temperature_label(self, value):
-        """Update temperature label when slider is moved"""
-        temperature = value / 10.0
-        self.temperature_label.setText(f"{temperature:.1f}")
-    
     def get_settings(self):
         """Get the configured model settings"""
         return {
             "model": self.model_selector.currentText(),
-            "temperature": self.temperature_slider.value() / 10.0,
             "max_tokens": self.max_tokens.value() if self.max_tokens.value() > 0 else None
         }
 
@@ -578,7 +552,6 @@ class OpenAIGUI(QMainWindow):
         
         # Default model settings
         self.model = "gpt-4o"
-        self.temperature = 1.0
         self.max_tokens = None
         
         # Load saved settings
@@ -616,7 +589,6 @@ class OpenAIGUI(QMainWindow):
             
         # Load model settings
         self.model = self.settings_manager.settings.value("model", "gpt-4o")
-        self.temperature = float(self.settings_manager.settings.value("temperature", 1.0))
         
         max_tokens = self.settings_manager.settings.value("max_tokens", None)
         if max_tokens is not None and max_tokens != "None":
@@ -663,7 +635,6 @@ class OpenAIGUI(QMainWindow):
         
         # Save model settings
         self.settings_manager.settings.setValue("model", self.model)
-        self.settings_manager.settings.setValue("temperature", self.temperature)
         self.settings_manager.settings.setValue("max_tokens", str(self.max_tokens))
         
         # Save credit limits and usage
@@ -939,17 +910,16 @@ class OpenAIGUI(QMainWindow):
 
     def open_model_settings(self):
         """Open dialog to configure model settings"""
-        dialog = ModelSelector(self, self.model, self.temperature, self.max_tokens)
+        dialog = ModelSelector(self, self.model, self.max_tokens)
         
         if dialog.exec_():
             settings = dialog.get_settings()
             self.model = settings["model"]
-            self.temperature = settings["temperature"]
             self.max_tokens = settings["max_tokens"]
             
             # Update model info display if exists
             if hasattr(self, 'model_info'):
-                self.model_info.setText(f"Model: {self.model} | Temp: {self.temperature}")
+                self.model_info.setText(f"Model: {self.model}")
     
     def open_credit_settings(self):
         """Open dialog to set credit limits"""
@@ -998,7 +968,6 @@ class OpenAIGUI(QMainWindow):
                         "content": prompt
                     }
                 ],
-                "temperature": self.temperature,
                 "timeout": 30  # Set a reasonable timeout (30 seconds)
             }
             
