@@ -11,8 +11,12 @@ This application provides a simple and intuitive interface for sending prompts t
 - User-friendly graphical interface built with PyQt5
 - Text input area for writing prompts
 - Response display area for viewing AI-generated content
+- Character and token counting for input management
+- Clear button to reset input and output fields
+- Loading indicator while waiting for API responses
+- Comprehensive network error handling with user-friendly messages
 - Secure API key handling using environment variables
-- Error handling for a smooth user experience
+- Color-coded action buttons for intuitive interaction
 
 ## Prerequisites
 
@@ -20,6 +24,8 @@ This application provides a simple and intuitive interface for sending prompts t
 - PyQt5
 - OpenAI Python library
 - python-dotenv
+- tiktoken (for token counting)
+- requests (for network operations)
 
 ## Installation
 
@@ -47,9 +53,11 @@ Run the application:
 python main.py
 ```
 
-1. Enter your prompt in the text area
-2. Click the "Submit" button to send the prompt to OpenAI
-3. View the response in the output area
+1. Enter your prompt in the text area (note the character and token count)
+2. Click the "Submit" button (green) to send the prompt to OpenAI
+3. Watch the loading indicator while waiting for the response
+4. View the response in the output area
+5. Use the "Clear" button (red) to reset both input and output fields
 
 ## Structure
 
@@ -64,7 +72,8 @@ python main.py
 
 - **API Key Error**: If you receive an error about the API key, make sure your `.env` file is properly formatted and placed in the project root directory.
 - **Module Not Found**: Ensure all required packages are installed using pip.
-- **Connection Issues**: Check your internet connection and OpenAI API status.
+- **Network Errors**: The application provides specific error messages for network issues. Follow the suggestions in the error message to resolve connectivity problems.
+- **Token Limit Exceeded**: If your prompt is too long, check the token counter to ensure you're within the model's limits.
 
 ## License
 
@@ -74,3 +83,4 @@ This project is part of the DS-3850-001 course assignment.
 
 - OpenAI for providing the API
 - PyQt5 team for the GUI framework
+- tiktoken library for accurate token counting
