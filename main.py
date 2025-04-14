@@ -30,6 +30,15 @@ class OpenAIGUI(QMainWindow):
         title_label.setStyleSheet('font-size: 18px; font-weight: bold;')
         main_layout.addWidget(title_label)
 
+        # Add input area
+        prompt_label = QLabel('Enter your prompt:')
+        main_layout.addWidget(prompt_label)
+
+        self.prompt_text = QTextEdit()
+        self.prompt_text.setPlaceholderText('Write your prompt here...')
+        self.prompt_text.setMinimumHeight(100)
+        main_layout.addWidget(self.prompt_text)
+
         # Set central widget
         self.setCentralWidget(central_widget)
 
