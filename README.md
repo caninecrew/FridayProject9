@@ -31,13 +31,14 @@ This application provides a simple and intuitive interface for sending prompts t
 
 2. Install required dependencies:
    ```
-   pip install PyQt5 openai python-dotenv
+   pip install -r requirements.txt
    ```
 
 3. Create a `.env` file in the project root directory and add your OpenAI API key:
    ```
    OPENAI_API_KEY=your_api_key_here
    ```
+   (You can use the provided `.env.example` file as a template)
 
 ## Usage
 
@@ -54,6 +55,8 @@ python main.py
 
 - `main.py`: The main application file containing the GUI code and OpenAI API integration
 - `.env`: Configuration file for storing the OpenAI API key
+- `.env.example`: Template for creating your own `.env` file
+- `requirements.txt`: List of project dependencies
 - `README.md`: Project documentation
 - `project_instructions.md`: Original project requirements
 
