@@ -15,7 +15,11 @@ class OpenAIGUI(QMainWindow):
         api_key = os.getenv("OPENAI_API_KEY") # Loading the OpenAI API key from environment variables
         self.client = OpenAI(api_key=api_key) # Initializing OpenAI client with the API key
 
-
+    def ininUI(self):
+        # Set window properties
+        self.setWindowTitle('OpenAI Interface')
+        self.setGeometry(300, 300, 600, 400)
+        
 completion = client.chat.completions.create(
     model="gpt-4o",
     messages=[
