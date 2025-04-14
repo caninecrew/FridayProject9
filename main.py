@@ -4,9 +4,11 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                             QProgressBar) # Importing necessary PyQt5 widgets
 from PyQt5.QtCore import Qt, QTimer # Importing Qt for Qt-specific features
 from openai import OpenAI # Importing OpenAI for API interaction
+from openai import APIConnectionError, APITimeoutError, RateLimitError # Import specific OpenAI exceptions
 from dotenv import load_dotenv # Importing load_dotenv for loading environment variables
 import os # Importing os for operating system dependent functionality
 import tiktoken # Importing tiktoken for token counting
+import requests.exceptions # Import requests exceptions for network error handling
 
 class OpenAIGUI(QMainWindow):
     def __init__(self):
@@ -131,16 +133,51 @@ class OpenAIGUI(QMainWindow):
                         "role": "user",
                         "content": prompt
                     }
-                ]
+                ],
+                timeout=30  # Set a reasonable timeout (30 seconds)
             )
             
             response = completion.choices[0].message.content
             self.response_text.setText(response)
             # print(response)  # Also print to console for debugging
+            
+        # Network-specific error handling
+        except APIConnectionError as e:
+            error_message = "Network Error: Could not connect to the OpenAI API. Please check your internet connection."
+            self.response_text.setText(f"{error_message}\n\nDetails: {str(e)}")
+            print(f"Connection error: {str(e)}")
+            
+        except APITimeoutError as e:
+            error_message = "Timeout Error: The request to OpenAI API timed out. The server might be experiencing high traffic or your connection might be slow."
+            self.response_text.setText(f"{error_message}\n\nDetails: {str(e)}")
+            print(f"Timeout error: {str(e)}")
+            
+        except RateLimitError as e:
+            error_message = "Rate Limit Error: You've exceeded the allowed number of API requests. Please try again later."
+            self.response_text.setText(f"{error_message}\n\nDetails: {str(e)}")
+            print(f"Rate limit error: {str(e)}")
+            
+        except requests.exceptions.ConnectionError as e:
+            error_message = "Network Connection Error: Failed to establish a connection. Please check your internet connection."
+            self.response_text.setText(f"{error_message}\n\nDetails: {str(e)}")
+            print(f"Requests connection error: {str(e)}")
+            
+        except requests.exceptions.Timeout as e:
+            error_message = "Network Timeout: The request timed out. Please check your internet connection speed or try again later."
+            self.response_text.setText(f"{error_message}\n\nDetails: {str(e)}")
+            print(f"Requests timeout error: {str(e)}")
+            
+        except requests.exceptions.RequestException as e:
+            error_message = "Network Request Error: There was an issue with the network request."
+            self.response_text.setText(f"{error_message}\n\nDetails: {str(e)}")
+            print(f"Requests error: {str(e)}")
+            
+        # Fallback general exception handler
         except Exception as e:
             error_message = f"Error: {str(e)}"
             self.response_text.setText(error_message)
-            print(error_message)
+            print(f"General error: {str(e)}")
+            
         finally:
             # Hide the loading indicator when done
             self.show_loading(False)
