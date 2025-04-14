@@ -1,7 +1,8 @@
 import sys # Importing sys for system-specific parameters and functions
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
-                            QHBoxLayout, QLabel, QPushButton, QTextEdit) # Importing necessary PyQt5 widgets
-from PyQt5.QtCore import Qt # Importing Qt for Qt-specific features
+                            QHBoxLayout, QLabel, QPushButton, QTextEdit,
+                            QProgressBar) # Importing necessary PyQt5 widgets
+from PyQt5.QtCore import Qt, QTimer # Importing Qt for Qt-specific features
 from openai import OpenAI # Importing OpenAI for API interaction
 from dotenv import load_dotenv # Importing load_dotenv for loading environment variables
 import os # Importing os for operating system dependent functionality
@@ -58,6 +59,31 @@ class OpenAIGUI(QMainWindow):
         button_layout.addStretch()
         main_layout.addLayout(button_layout)
 
+        # Add loading indicator
+        self.loading_indicator = QProgressBar()
+        self.loading_indicator.setRange(0, 0)  # Makes it into an activity indicator
+        self.loading_indicator.setVisible(False)  # Hide it initially
+        self.loading_indicator.setStyleSheet("""
+            QProgressBar {
+                border: 1px solid grey;
+                border-radius: 5px;
+                text-align: center;
+                height: 15px;
+            }
+            QProgressBar::chunk {
+                background-color: #3498db;
+                width: 20px;
+            }
+        """)
+        self.loading_text = QLabel("Waiting for response...")
+        self.loading_text.setAlignment(Qt.AlignCenter)
+        self.loading_text.setVisible(False)
+        
+        loading_layout = QVBoxLayout()
+        loading_layout.addWidget(self.loading_text)
+        loading_layout.addWidget(self.loading_indicator)
+        main_layout.addLayout(loading_layout)
+
         # Add response area
         response_label = QLabel('Response:')
         main_layout.addWidget(response_label)
@@ -77,11 +103,25 @@ class OpenAIGUI(QMainWindow):
         token_count = len(self.tokenizer.encode(text)) if text else 0
         self.counter_label.setText(f'Characters: {char_count} | Tokens: {token_count}')
 
+    def show_loading(self, show=True):
+        """Show or hide the loading indicator"""
+        self.loading_indicator.setVisible(show)
+        self.loading_text.setVisible(show)
+        self.submit_button.setEnabled(not show)
+        if show:
+            self.response_text.setPlaceholderText("Generating response...")
+        else:
+            self.response_text.setPlaceholderText("Response will appear here...")
+        QApplication.processEvents()  # Force UI update
+
     def get_response(self):
         prompt = self.prompt_text.toPlainText()
         if not prompt:
             self.response_text.setText("Please enter a prompt.")
             return
+        
+        # Show the loading indicator
+        self.show_loading(True)
             
         try:
             completion = self.client.chat.completions.create(
@@ -101,6 +141,9 @@ class OpenAIGUI(QMainWindow):
             error_message = f"Error: {str(e)}"
             self.response_text.setText(error_message)
             print(error_message)
+        finally:
+            # Hide the loading indicator when done
+            self.show_loading(False)
 
 def main():
     app = QApplication(sys.argv) # Creating a QApplication instance
