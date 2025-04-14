@@ -81,7 +81,7 @@ class OpenAIGUI(QMainWindow):
             
             response = completion.choices[0].message.content
             self.response_text.setText(response)
-            print(response)  # Also print to console for debugging
+            #print(response)  # Also print to console for debugging
         except Exception as e:
             error_message = f"Error: {str(e)}"
             self.response_text.setText(error_message)
